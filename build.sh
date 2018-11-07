@@ -15,7 +15,7 @@ default='\033[0m'
 KERNEL_DIR=$PWD
 IMAGE=$KERNEL_DIR/out/arch/arm64/boot/Image.gz-dtb
 DTBTOOL=$KERNEL_DIR/scripts/dtbToolCM
-TOOLCHAIN=/home/tanay297/android/toolchain/4.9-stock-64/bin
+TOOLCHAIN=/home/tanay297/android/toolchain/6.x-linaro-64/bin
 
 #Paths
 OUT_DIR=$KERNEL_DIR/ak
@@ -32,7 +32,7 @@ INFECTED_VER="$BASE$CUR_VER"
 
 DEFCONFIG="beryllium_defconfig"
 export LOCALVERSION=~`echo $INFECTED_VER`
-export CROSS_COMPILE=$TOOLCHAIN/aarch64-linux-android-
+export CROSS_COMPILE=$TOOLCHAIN/aarch64-linux-gnu-
 export ARCH=arm64
 export SUBARCH=arm64
 export KBUILD_BUILD_USER="tanay297"
