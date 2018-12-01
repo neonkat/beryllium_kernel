@@ -39,6 +39,8 @@ dump_boot;
 
 # begin ramdisk changes
 
+insert_line init.rc "import /init.spectrum.rc" after "import /init.usb.rc" "import /init.spectrum.rc";
+
 # end ramdisk changes
 
 write_boot;
