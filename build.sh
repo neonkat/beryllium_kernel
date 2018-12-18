@@ -71,7 +71,7 @@ function make_recompile {
 			make -j4
 			rm -rf $NEWOUT/zImage
 			cp -vr $IMAGE $NEW_OUT/zImage
-                        make_modules		
+                        #make_modules		
 			make_zip
 			housekeeping
 		        }
