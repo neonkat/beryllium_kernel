@@ -15,7 +15,7 @@ default='\033[0m'
 KERNEL_DIR=$PWD
 IMAGE=$KERNEL_DIR/out/arch/arm64/boot/Image.gz-dtb
 DTBTOOL=$KERNEL_DIR/scripts/dtbToolCM
-TOOLCHAIN=/home/tanay297/android/toolchain/6.x-linaro-64/bin
+TOOLCHAIN=/home/tanay297/android/toolchain/7.x-linaro-64/bin
 
 #Paths
 OUT_DIR=$KERNEL_DIR/ak
