@@ -15,7 +15,7 @@ default='\033[0m'
 KERNEL_DIR=$PWD
 IMAGE=$KERNEL_DIR/out/arch/arm64/boot/Image.gz-dtb
 DTBTOOL=$KERNEL_DIR/scripts/dtbToolCM
-CLANG=/home/tanay297/android/clang/aosp/bin/clang
+CLANG=/home/tanay297/android/clang/dtc/bin/clang
 TOOLCHAIN=/home/tanay297/android/toolchain/7.x-linaro-64/bin/aarch64-linux-gnu-
 
 #Paths
