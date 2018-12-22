@@ -15,7 +15,8 @@ default='\033[0m'
 KERNEL_DIR=$PWD
 IMAGE=$KERNEL_DIR/out/arch/arm64/boot/Image.gz-dtb
 DTBTOOL=$KERNEL_DIR/scripts/dtbToolCM
-TOOLCHAIN=/home/tanay297/android/toolchain/7.x-linaro-64/bin
+CLANG=/home/tanay297/android/clang/aosp/bin/clang
+TOOLCHAIN=/home/tanay297/android/toolchain/7.x-linaro-64/bin/aarch64-linux-gnu-
 
 #Paths
 OUT_DIR=$KERNEL_DIR/ak
@@ -31,10 +32,8 @@ INFECTED_VER="$BASE$CUR_VER"
 # Variables
 
 DEFCONFIG="beryllium_defconfig"
-export LOCALVERSION=~`echo $INFECTED_VER`
-export CROSS_COMPILE=$TOOLCHAIN/aarch64-linux-gnu-
 export ARCH=arm64
-export SUBARCH=arm64
+export LOCALVERSION=-`echo $INFECTED_VER`
 export KBUILD_BUILD_USER="tanay297"
 export KBUILD_BUILD_HOST="krustykrab"
 
@@ -42,9 +41,9 @@ function make_infected {
 		       echo -e "$green*******************************************************"
 		       echo "                  Compiling $INFECTED_VER	              "
 		       echo -e "*****************************************************$default"
-		       echo
-		       make $DEFCONFIG
-		       make -j4
+		       echo 
+		       make $DEFCONFIG 
+                       make CC=$CLANG CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=$TOOLCHAIN -j4
 		       rm -rf $NEWOUT/zImage
 		       cp -vr $IMAGE $NEW_OUT/zImage
                        #make_modules
@@ -68,7 +67,7 @@ function make_recompile {
 			echo -e "$cyan*******************************************************"
 			echo "             Recompiling $INFECTED_VER	              "
 			echo -e "*****************************************************$default"
-			make -j4
+                        make CC=$CLANG CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=$TOOLCHAIN -j4
 			rm -rf $NEWOUT/zImage
 			cp -vr $IMAGE $NEW_OUT/zImage
                         #make_modules		
