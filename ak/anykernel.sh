@@ -41,6 +41,8 @@ dump_boot;
 
 insert_line init.rc "import /init.spectrum.rc" after "import /init.usb.rc" "import /init.spectrum.rc";
 
+insert_line init.rc "import /init.infected.rc" after "import /init.usb.configfs.rc" "import /init.infected.rc";
+
 # end ramdisk changes
 
 write_boot;
