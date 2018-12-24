@@ -1,7 +1,7 @@
 on property:sys.boot_completed=1
  
   # Default Balanced Profile
-  write /sys/module/cpu_boost/parameters/dynamic_stune_boost 10
+  write /sys/module/cpu_boost/parameters/dynamic_stune_boost 8
   write /sys/module/cpu_boost/parameters/input_boost_freq "0:0 1:0 2:0 3:0 4:0 5:0 6:0 7:0"
   write /sys/module/cpu_boost/parameters/input_boost_ms 150
   write /dev/stune/top-app/schedtune.sched_boost 0
