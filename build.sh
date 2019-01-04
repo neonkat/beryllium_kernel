@@ -43,7 +43,7 @@ function make_infected {
 		       echo -e "*****************************************************$default"
 		       echo 
 		       make $DEFCONFIG 
-                       make CC=$CLANG CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=$TOOLCHAIN -j4
+                       make CC="ccache $CLANG" CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=$TOOLCHAIN -j4
 		       rm -rf $NEWOUT/zImage
 		       cp -vr $IMAGE $NEW_OUT/zImage
                        #make_modules
@@ -67,7 +67,7 @@ function make_recompile {
 			echo -e "$cyan*******************************************************"
 			echo "             Recompiling $INFECTED_VER	              "
 			echo -e "*****************************************************$default"
-                        make CC=$CLANG CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=$TOOLCHAIN -j4
+                        make CC="ccache $CLANG" CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=$TOOLCHAIN -j4
 			rm -rf $NEWOUT/zImage
 			cp -vr $IMAGE $NEW_OUT/zImage
                         #make_modules		
