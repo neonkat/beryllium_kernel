@@ -88,6 +88,7 @@ fi;
 ui_print " ";
 ui_print "AnyKernel2 by osm0sis @ xda-developers";
 ui_print " ";
+ui_print "Infected Kernel by neonkat @ xda-developers";
 ui_print " ";
 
 unmount_all;
