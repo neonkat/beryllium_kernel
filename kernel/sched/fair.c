@@ -6947,6 +6947,10 @@ static int start_cpu(bool boosted)
 	start_cpu = boosted ? rd->max_cap_orig_cpu : rd->min_cap_orig_cpu;
 
 	return walt_start_cpu(start_cpu);
+
+	if(!sched_feat(STUNE_BOOST_BIAS_BIG))
+		return rd->min_cap_orig_cpu;
+
 }
 
 unsigned int sched_smp_overlap_capacity;
