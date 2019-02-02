@@ -17,7 +17,7 @@ on property:persist.spectrum.profile=0
     # Add configs here
     write /sys/module/cpu_boost/parameters/dynamic_stune_boost 8
     write /sys/module/cpu_boost/parameters/input_boost_freq "0:0 1:0 2:0 3:0 4:0 5:0 6:0 7:0"
-    write /sys/module/cpu_boost/parameters/input_boost_ms 150
+    write /sys/module/cpu_boost/parameters/dynamic_stune_boost_ms 500
     write /dev/stune/top-app/schedtune.sched_boost 0
     write /dev/stune/foreground/schedtune.sched_boost 1
     write /dev/stune/background/schedtune.sched_boost 1
@@ -28,7 +28,7 @@ on property:persist.spectrum.profile=1
     # Add configs here
     write /sys/module/cpu_boost/parameters/dynamic_stune_boost 15
     write /sys/module/cpu_boost/parameters/input_boost_freq "0:0 1:0 2:0 3:0 4:0 5:0 6:0 7:0"
-    write /sys/module/cpu_boost/parameters/input_boost_ms 150
+    write /sys/module/cpu_boost/parameters/dynamic_stune_boost_ms 900
     write /dev/stune/top-app/schedtune.sched_boost 0
     write /dev/stune/foreground/schedtune.sched_boost 1
     write /dev/stune/background/schedtune.sched_boost 1
@@ -39,7 +39,7 @@ on property:persist.spectrum.profile=2
     # Add configs here
     write /sys/module/cpu_boost/parameters/dynamic_stune_boost 0
     write /sys/module/cpu_boost/parameters/input_boost_freq "0:0 1:0 2:0 3:0 4:0 5:0 6:0 7:0"
-    write /sys/module/cpu_boost/parameters/input_boost_ms 0
+    write /sys/module/cpu_boost/parameters/dynamic_stune_boost_ms 0
     write /dev/stune/top-app/schedtune.sched_boost 0
     write /dev/stune/foreground/schedtune.sched_boost 0
     write /dev/stune/background/schedtune.sched_boost 0
@@ -50,7 +50,7 @@ on property:persist.spectrum.profile=3
     # Add configs here
     write /sys/module/cpu_boost/parameters/dynamic_stune_boost 20
     write /sys/module/cpu_boost/parameters/input_boost_freq "0:0 1:0 2:0 3:0 4:0 5:0 6:0 7:0"
-    write /sys/module/cpu_boost/parameters/input_boost_ms 200
+    write /sys/module/cpu_boost/parameters/dynamic_stune_boost_ms 1000
     write /dev/stune/top-app/schedtune.sched_boost 0
     write /dev/stune/foreground/schedtune.sched_boost 1
     write /dev/stune/background/schedtune.sched_boost 1

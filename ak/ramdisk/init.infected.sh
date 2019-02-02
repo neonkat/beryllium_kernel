@@ -2,7 +2,7 @@
 
   echo 6 > /sys/module/cpu_boost/parameters/dynamic_stune_boost 
   echo "0:0" > /sys/module/cpu_boost/parameters/input_boost_freq 
-  echo 150 > /sys/module/cpu_boost/parameters/input_boost_ms 
+  echo 500 > /sys/module/cpu_boost/parameters/dynamic_stune_boost_ms 
   echo 0 > /dev/stune/top-app/schedtune.sched_boost 
   echo 1 > /dev/stune/foreground/schedtune.sched_boost 
   echo 1 > /dev/stune/background/schedtune.sched_boost 
