@@ -26,7 +26,7 @@ NEW_OUT=$OUT_DIR
 
 # Kernel Version Info
 BASE="Infected_Kernel"
-CUR_VER=""
+CUR_VER="-R1"
 INFECTED_VER="$BASE$CUR_VER"
  
 # Variables
@@ -100,8 +100,8 @@ function make_zip {
 		  echo -e "*****************************************************$default"
 		  cd $OUT_DIR
 		  rm -f *.zip
-		  zip -r9 Infected_Beryllium_`echo $CUR_VER`.zip *
-		  mv Infected_Beryllium_`echo $CUR_VER`.zip $OUT_ZIP
+		  zip -r9 Infected_Beryllium`echo $CUR_VER`.zip *
+		  mv Infected_Beryllium`echo $CUR_VER`.zip $OUT_ZIP
 		  echo "Find your zip in Release directory"
 		  cd $KERNEL_DIR 
 		  }
