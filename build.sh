@@ -12,11 +12,12 @@ blue='\033[0;34m'
 default='\033[0m'
 
 # Resources
+HOME=/home/tanay297/android
 KERNEL_DIR=$PWD
 IMAGE=$KERNEL_DIR/out/arch/arm64/boot/Image.gz-dtb
 DTBTOOL=$KERNEL_DIR/scripts/dtbToolCM
-CLANG=/home/tanay297/android/clang/dtc/bin/clang
-TOOLCHAIN=/home/tanay297/android/toolchain/7.x-linaro-64/bin/aarch64-linux-gnu-
+CLANG=$HOME/clang/dtc/bin/clang
+TOOLCHAIN=$HOME/toolchain/7.x-linaro-64/bin/aarch64-linux-gnu-
 
 #Paths
 OUT_DIR=$KERNEL_DIR/ak
