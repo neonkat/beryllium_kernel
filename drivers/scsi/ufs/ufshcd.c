@@ -2093,7 +2093,7 @@ static void __ufshcd_hibern8_release(struct ufs_hba *hba, bool no_sched)
 	if (delay_in_jiffies == 1)
 		delay_in_jiffies++;
 
-	schedule_delayed_work(&hba->hibern8_on_idle.enter_work,
+	queue_delayed_work(system_power_efficient_wq, &hba->hibern8_on_idle.enter_work,
 			      delay_in_jiffies);
 }
 
@@ -7054,7 +7054,7 @@ static int ufshcd_eh_device_reset_handler(struct scsi_cmnd *cmd)
 out:
 	hba->req_abort_count = 0;
 	if (!err) {
-		schedule_delayed_work(&hba->ufshpb_init_work,
+		queue_delayed_work(system_power_efficient_wq, &hba->ufshpb_init_work,
 					msecs_to_jiffies(10));
 		err = SUCCESS;
 	} else {
@@ -8106,7 +8106,7 @@ static int ufshcd_probe_hba(struct ufs_hba *hba)
 			hba->clk_scaling.is_allowed = true;
 		}
 
-		schedule_delayed_work(&hba->ufshpb_init_work,
+		queue_delayed_work(system_power_efficient_wq, &hba->ufshpb_init_work,
 						msecs_to_jiffies(0));
 
 		scsi_scan_host(hba->host);
