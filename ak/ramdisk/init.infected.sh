@@ -11,3 +11,6 @@
   echo 1200 > /sys/module/cpu_boost/parameters/powerkey_input_boost_ms
   echo 10 > /sys/class/thermal/thermal_message/sconfig
   echo 2323200 > /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq
+  echo 1209600 > /sys/devices/system/cpu/cpufreq/policy0/schedutil/hispeed_freq
+  echo 1612800 > /sys/devices/system/cpu/cpufreq/policy4/schedutil/hispeed_freq
+
