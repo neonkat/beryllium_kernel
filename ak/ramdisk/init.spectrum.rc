@@ -15,6 +15,7 @@ on property:sys.boot_completed=1
 # Balance (default profile)
 on property:persist.spectrum.profile=0
     # Add configs here
+    write /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq 2323200
     write /sys/module/cpu_boost/parameters/dynamic_stune_boost 10
     write /sys/module/cpu_boost/parameters/input_boost_freq "0:0 1:0 2:0 3:0 4:0 5:0 6:0 7:0"
     write /sys/module/cpu_boost/parameters/dynamic_stune_boost_ms 500
@@ -27,6 +28,7 @@ on property:persist.spectrum.profile=0
 # Performance (based on DrunkSauce Lite)
 on property:persist.spectrum.profile=1
     # Add configs here
+    write /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq 2323200
     write /sys/module/cpu_boost/parameters/dynamic_stune_boost 15
     write /sys/module/cpu_boost/parameters/input_boost_freq "0:0 1:0 2:0 3:0 4:0 5:0 6:0 7:0"
     write /sys/module/cpu_boost/parameters/dynamic_stune_boost_ms 500
@@ -39,6 +41,7 @@ on property:persist.spectrum.profile=1
 # Battery
 on property:persist.spectrum.profile=2
     # Add configs here
+    write /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq 825600
     write /sys/module/cpu_boost/parameters/dynamic_stune_boost 0
     write /sys/module/cpu_boost/parameters/input_boost_freq "0:0 1:0 2:0 3:0 4:0 5:0 6:0 7:0"
     write /sys/module/cpu_boost/parameters/dynamic_stune_boost_ms 0
@@ -51,6 +54,7 @@ on property:persist.spectrum.profile=2
 # Gaming
 on property:persist.spectrum.profile=3
     # Add configs here
+    write /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq 2803200
     write /sys/module/cpu_boost/parameters/dynamic_stune_boost 15
     write /sys/module/cpu_boost/parameters/input_boost_freq "0:0 1:0 2:0 3:0 4:0 5:0 6:0 7:0"
     write /sys/module/cpu_boost/parameters/dynamic_stune_boost_ms 800
