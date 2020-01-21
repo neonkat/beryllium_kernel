@@ -242,25 +242,7 @@ sda845-v2.1-cdp-sdxpoorwills-overlay.dtbo-base := sda845-v2.1.dtb
 sda845-v2.1-mtp-sdxpoorwills-overlay.dtbo-base := sda845-v2.1.dtb
 sda845-v2-mtp-sdxpoorwills-overlay.dtbo-base := sda845-v2.dtb
 else
-dtb-$(CONFIG_ARCH_SDM845) += sdm845-sim.dtb \
-	sdm845-rumi.dtb \
-	sdm845-mtp.dtb \
-	sdm845-cdp.dtb \
-	sdm845-v2-rumi.dtb \
-	sdm845-v2-mtp.dtb \
-	sdm845-v2-robotics.dtb \
-	sdm845-v2-cdp.dtb \
-	sdm845-qrd.dtb \
-	sdm845-v2-qrd.dtb \
-	sdm845-v2-qvr-evt.dtb \
-	sdm845-v2-qvr-dvt.dtb \
-	sdm845-4k-panel-mtp.dtb \
-	sdm845-4k-panel-cdp.dtb \
-	sdm845-4k-panel-qrd.dtb \
-	sdm845-interposer-sdm670-mtp.dtb \
-	sdm845-interposer-sdm670-cdp.dtb \
-	sdm845-v2.1-rb3.dtb \
-	sdm845-v2.1-mtp.dtb
+dtb-$(CONFIG_ARCH_SDM845) += beryllium-mp-v2.1.dtb
 endif
 endif
 
