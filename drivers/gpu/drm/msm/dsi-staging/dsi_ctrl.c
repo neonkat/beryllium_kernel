@@ -121,7 +121,10 @@ static ssize_t debugfs_state_info_read(struct file *file,
 			dsi_ctrl->clk_freq.pix_clk_rate,
 			dsi_ctrl->clk_freq.esc_clk_rate);
 
-	/* TODO: make sure that this does not exceed 4K */
+	if (len > count)
+		len = count;
+
+	len = min_t(size_t, len, SZ_4K);
 	if (copy_to_user(buff, buf, len)) {
 		kfree(buf);
 		return -EFAULT;
@@ -176,8 +179,10 @@ static ssize_t debugfs_reg_dump_read(struct file *file,
 		return rc;
 	}
 
+	if (len > count)
+		len = count;
 
-	/* TODO: make sure that this does not exceed 4K */
+	len = min_t(size_t, len, SZ_4K);
 	if (copy_to_user(buff, buf, len)) {
 		kfree(buf);
 		return -EFAULT;
@@ -1808,7 +1813,7 @@ static struct platform_driver dsi_ctrl_driver = {
 	},
 };
 
-#if defined(CONFIG_DEBUG_FS)
+#if 0
 
 void dsi_ctrl_debug_dump(u32 *entries, u32 size)
 {

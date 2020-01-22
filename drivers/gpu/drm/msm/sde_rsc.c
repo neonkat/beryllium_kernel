@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -940,7 +940,7 @@ clk_enable_fail:
 }
 EXPORT_SYMBOL(sde_rsc_client_vote);
 
-#if defined(CONFIG_DEBUG_FS)
+#if 0
 void sde_rsc_debug_dump(u32 mux_sel)
 {
 	struct sde_rsc_priv *rsc;
@@ -1044,6 +1044,9 @@ end:
 	if (blen <= 0)
 		return 0;
 
+	if (blen > count)
+		blen = count;
+
 	if (copy_to_user(buf, buffer, blen))
 		return -EFAULT;
 
@@ -1135,6 +1138,9 @@ end:
 	mutex_unlock(&rsc->client_lock);
 	if (blen <= 0)
 		return 0;
+
+	if (blen > count)
+		blen = count;
 
 	if (copy_to_user(buf, buffer, blen))
 		return -EFAULT;

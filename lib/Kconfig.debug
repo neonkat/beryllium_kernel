@@ -572,7 +572,7 @@ config DEBUG_KMEMLEAK_EARLY_LOG_SIZE
 	int "Maximum kmemleak early log entries"
 	depends on DEBUG_KMEMLEAK
 	range 200 40000
-	default 400
+	default 16000
 	help
 	  Kmemleak must track all the memory allocations to avoid
 	  reporting false positives. Since memory may be allocated or
@@ -1010,6 +1010,15 @@ config PANIC_ON_RT_THROTTLING
 	  and debugging RT throttling issues.
 
 	  Say N if unsure.
+
+config SYSRQ_SCHED_DEBUG
+	bool "Print scheduling debugging info from sysrq-trigger"
+	depends on SCHED_DEBUG
+	default y
+	help
+	  If you say Y here, the "show-task-states(T)" and
+	  "show-blocked-tasks(W)" sysrq-triggers will print additional
+	  scheduling statistics.
 
 config SCHEDSTATS
 	bool "Collect scheduler statistics"

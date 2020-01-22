@@ -48,24 +48,15 @@ module_param_named(debug_mask, msm_smem_debug_mask,
 static void *smem_ipc_log_ctx;
 #define NUM_LOG_PAGES 4
 
-#define IPC_LOG(x...) do {                                   \
-		if (smem_ipc_log_ctx)                        \
-			ipc_log_string(smem_ipc_log_ctx, x); \
-	} while (0)
-
+#define IPC_LOG(x...) ((void)0)
 
 #define LOG_ERR(x...) do {  \
 		pr_err(x);  \
-		IPC_LOG(x); \
 	} while (0)
-#define SMEM_DBG(x...) do {                               \
-		if (msm_smem_debug_mask & MSM_SMEM_DEBUG) \
-			IPC_LOG(x);                       \
-	} while (0)
-#define SMEM_INFO(x...) do {                             \
-		if (msm_smem_debug_mask & MSM_SMEM_INFO) \
-			IPC_LOG(x);                      \
-	} while (0)
+
+#define SMEM_DBG(x...) ((void)0)
+
+#define SMEM_INFO(x...) ((void)0)
 
 #define SMEM_SPINLOCK_SMEM_ALLOC       "S:3"
 
@@ -1414,14 +1405,14 @@ static int smem_init_target_info(phys_addr_t info_addr, resource_size_t size)
 	return 0;
 }
 
+#define TEMP_STRING_SIZE 11 /* max 3 digit count */
 static int msm_smem_probe(struct platform_device *pdev)
 {
 	char *key;
 	struct resource *r;
 	phys_addr_t aux_mem_base;
 	resource_size_t aux_mem_size;
-	int temp_string_size = 11; /* max 3 digit count */
-	char temp_string[temp_string_size];
+	char temp_string[TEMP_STRING_SIZE];
 	int ret;
 	struct ramdump_segment *ramdump_segments_tmp = NULL;
 	struct smem_area *smem_areas_tmp = NULL;
@@ -1504,7 +1495,7 @@ smem_targ_info_done:
 
 	num_smem_areas = 1;
 	while (1) {
-		scnprintf(temp_string, temp_string_size, "aux-mem%d",
+		scnprintf(temp_string, TEMP_STRING_SIZE, "aux-mem%d",
 				num_smem_areas);
 		r = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 								temp_string);
@@ -1544,7 +1535,7 @@ smem_targ_info_done:
 
 	/* Configure auxiliary SMEM regions */
 	while (1) {
-		scnprintf(temp_string, temp_string_size, "aux-mem%d",
+		scnprintf(temp_string, TEMP_STRING_SIZE, "aux-mem%d",
 								smem_idx);
 		r = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 							temp_string);

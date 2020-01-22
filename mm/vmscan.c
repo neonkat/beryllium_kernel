@@ -82,6 +82,8 @@ struct scan_control {
 	 */
 	struct mem_cgroup *target_mem_cgroup;
 
+	int swappiness;
+
 	/* Scan (total_size >> priority) pages at once */
 	int priority;
 
@@ -434,6 +436,35 @@ static unsigned long do_shrink_slab(struct shrink_control *shrinkctl,
 	return freed;
 }
 
+static void shrink_slab_lmk(gfp_t gfp_mask, int nid,
+				 struct mem_cgroup *memcg,
+				 unsigned long nr_scanned,
+				 unsigned long nr_eligible)
+{
+	struct shrinker *shrinker;
+
+	if (nr_scanned == 0)
+		nr_scanned = SWAP_CLUSTER_MAX;
+
+	if (!down_read_trylock(&shrinker_rwsem))
+		goto out;
+
+	list_for_each_entry(shrinker, &shrinker_list, list) {
+		struct shrink_control sc = {
+			.gfp_mask = gfp_mask,
+		};
+
+		if (!(shrinker->flags & SHRINKER_LMK))
+			continue;
+
+		do_shrink_slab(&sc, shrinker, nr_scanned, nr_eligible);
+	}
+
+	up_read(&shrinker_rwsem);
+out:
+	cond_resched();
+}
+
 /**
  * shrink_slab - shrink slab caches
  * @gfp_mask: allocation context
@@ -493,6 +524,9 @@ static unsigned long shrink_slab(gfp_t gfp_mask, int nid,
 			.nid = nid,
 			.memcg = memcg,
 		};
+
+		if (shrinker->flags & SHRINKER_LMK)
+			continue;
 
 		/*
 		 * If kernel memory accounting is disabled, we ignore
@@ -1377,6 +1411,7 @@ unsigned long reclaim_pages_from_list(struct list_head *page_list,
 		.may_unmap = 1,
 		.may_swap = 1,
 		.target_vma = vma,
+		.swappiness = vm_swappiness,
 	};
 
 	unsigned long nr_reclaimed;
@@ -2153,7 +2188,9 @@ static bool inactive_list_is_low(struct lruvec *lruvec, bool file,
 	unsigned long inactive, active;
 	enum lru_list inactive_lru = file * LRU_FILE;
 	enum lru_list active_lru = file * LRU_FILE + LRU_ACTIVE;
+#ifndef CONFIG_FIX_INACTIVE_RATIO
 	unsigned long gb;
+#endif
 
 	/*
 	 * If we don't have swap space, anonymous page deactivation
@@ -2165,11 +2202,15 @@ static bool inactive_list_is_low(struct lruvec *lruvec, bool file,
 	inactive = lruvec_lru_size(lruvec, inactive_lru, sc->reclaim_idx);
 	active = lruvec_lru_size(lruvec, active_lru, sc->reclaim_idx);
 
+#ifdef CONFIG_FIX_INACTIVE_RATIO
+	inactive_ratio = 1;
+#else
 	gb = (inactive + active) >> (30 - PAGE_SHIFT);
 	if (gb)
 		inactive_ratio = int_sqrt(10 * gb);
 	else
 		inactive_ratio = 1;
+#endif
 
 	return inactive * inactive_ratio < active;
 }
@@ -2750,6 +2791,7 @@ static void shrink_zones(struct zonelist *zonelist, struct scan_control *sc)
 	unsigned long nr_soft_scanned;
 	gfp_t orig_mask;
 	pg_data_t *last_pgdat = NULL;
+	unsigned long lru_pages = 0;
 
 	/*
 	 * If the number of buffer_heads in the machine exceeds the maximum
@@ -2769,6 +2811,7 @@ static void shrink_zones(struct zonelist *zonelist, struct scan_control *sc)
 		 * to global LRU.
 		 */
 		if (global_reclaim(sc)) {
+			lru_pages += zone_reclaimable_pages(zone);
 			if (!cpuset_zone_allowed(zone,
 						 GFP_KERNEL | __GFP_HARDWALL))
 				continue;
@@ -2820,6 +2863,9 @@ static void shrink_zones(struct zonelist *zonelist, struct scan_control *sc)
 		shrink_node(zone->zone_pgdat, sc);
 	}
 
+	if (global_reclaim(sc))
+		shrink_slab_lmk(sc->gfp_mask, 0, NULL,
+				sc->nr_scanned, lru_pages);
 	/*
 	 * Restore to original mask to avoid the impact on the caller if we
 	 * promoted it to __GFP_HIGHMEM.
@@ -3037,7 +3083,16 @@ unsigned long try_to_free_pages(struct zonelist *zonelist, int order,
 		.priority = DEF_PRIORITY,
 		.may_writepage = !laptop_mode,
 		.may_unmap = 1,
+#ifdef CONFIG_DIRECT_RECLAIM_FILE_PAGES_ONLY
+		.may_swap = 0,
+#else
 		.may_swap = 1,
+#endif
+#ifdef CONFIG_ZSWAP
+		.swappiness = vm_swappiness / 2,
+#else
+		.swappiness = vm_swappiness,
+#endif
 	};
 
 	/*
@@ -3074,6 +3129,7 @@ unsigned long mem_cgroup_shrink_node(struct mem_cgroup *memcg,
 		.may_unmap = 1,
 		.reclaim_idx = MAX_NR_ZONES - 1,
 		.may_swap = !noswap,
+		.swappiness = vm_swappiness,
 	};
 	unsigned long lru_pages;
 
@@ -3119,6 +3175,7 @@ unsigned long try_to_free_mem_cgroup_pages(struct mem_cgroup *memcg,
 		.may_writepage = !laptop_mode,
 		.may_unmap = 1,
 		.may_swap = may_swap,
+		.swappiness = vm_swappiness,
 	};
 
 	/*
@@ -3254,11 +3311,31 @@ static bool prepare_kswapd_sleep(pg_data_t *pgdat, int order, int classzone_idx)
  * This is used to determine if the scanning priority needs to be raised.
  */
 static bool kswapd_shrink_node(pg_data_t *pgdat,
-			       struct scan_control *sc)
+			       struct scan_control *sc,
+			       unsigned long lru_pages)
 {
 	struct zone *zone;
 	int z;
 
+	if (sc->order) {
+		int ret;
+
+		for (z = 0; z <= sc->reclaim_idx; z++) {
+			zone = pgdat->node_zones + z;
+			if (!managed_zone(zone))
+				continue;
+			ret = compaction_suitable(zone, sc->order, 0,
+						sc->reclaim_idx);
+			if (ret != COMPACT_SUCCESS && ret != COMPACT_CONTINUE)
+				goto reclaim;
+		}
+
+		sc->order = 0;
+		sc->nr_reclaimed = SWAP_CLUSTER_MAX;
+		return true;
+	}
+
+reclaim:
 	/* Reclaim a number of pages proportional to the number of zones */
 	sc->nr_to_reclaim = 0;
 	for (z = 0; z <= sc->reclaim_idx; z++) {
@@ -3274,6 +3351,8 @@ static bool kswapd_shrink_node(pg_data_t *pgdat,
 	 * now pressure is applied based on node LRU order.
 	 */
 	shrink_node(pgdat, sc);
+	shrink_slab_lmk(sc->gfp_mask, zone_to_nid(zone), NULL,
+			sc->nr_scanned, lru_pages);
 
 	/*
 	 * Fragmentation may mean that the system cannot be rebalanced for
@@ -3315,6 +3394,7 @@ static int balance_pgdat(pg_data_t *pgdat, int order, int classzone_idx)
 		.may_writepage = !laptop_mode,
 		.may_unmap = 1,
 		.may_swap = 1,
+		.swappiness = vm_swappiness,
 	};
 
 	psi_memstall_enter(&pflags);
@@ -3323,6 +3403,7 @@ static int balance_pgdat(pg_data_t *pgdat, int order, int classzone_idx)
 	do {
 		unsigned long nr_reclaimed = sc.nr_reclaimed;
 		bool raise_priority = true;
+		unsigned long lru_pages = 0;
 
 		sc.reclaim_idx = classzone_idx;
 
@@ -3370,6 +3451,15 @@ static int balance_pgdat(pg_data_t *pgdat, int order, int classzone_idx)
 		if (sc.priority < DEF_PRIORITY - 2)
 			sc.may_writepage = 1;
 
+		for (i = 0; i <= classzone_idx; i++) {
+			zone = pgdat->node_zones + i;
+
+			if (!populated_zone(zone))
+				continue;
+
+			lru_pages += zone_reclaimable_pages(zone);
+		}
+
 		/* Call soft limit reclaim before calling shrink_node. */
 		sc.nr_scanned = 0;
 		nr_soft_scanned = 0;
@@ -3382,7 +3472,7 @@ static int balance_pgdat(pg_data_t *pgdat, int order, int classzone_idx)
 		 * enough pages are already being scanned that that high
 		 * watermark would be met at 100% efficiency.
 		 */
-		if (kswapd_shrink_node(pgdat, &sc))
+		if (kswapd_shrink_node(pgdat, &sc, lru_pages))
 			raise_priority = false;
 
 		/*
@@ -3664,6 +3754,7 @@ unsigned long shrink_all_memory(unsigned long nr_to_reclaim)
 		.may_writepage = 1,
 		.may_unmap = 1,
 		.may_swap = 1,
+		.swappiness = vm_swappiness,
 		.hibernation_mode = 1,
 	};
 	struct zonelist *zonelist = node_zonelist(numa_node_id(), sc.gfp_mask);
@@ -3847,6 +3938,7 @@ static int __node_reclaim(struct pglist_data *pgdat, gfp_t gfp_mask, unsigned in
 		.nr_to_reclaim = max(nr_pages, SWAP_CLUSTER_MAX),
 		.gfp_mask = memalloc_noio_flags(gfp_mask),
 		.order = order,
+		.swappiness = vm_swappiness,
 		.priority = NODE_RECLAIM_PRIORITY,
 		.may_writepage = !!(node_reclaim_mode & RECLAIM_WRITE),
 		.may_unmap = !!(node_reclaim_mode & RECLAIM_UNMAP),

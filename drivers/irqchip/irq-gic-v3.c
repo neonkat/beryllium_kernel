@@ -28,7 +28,6 @@
 #include <linux/of_irq.h>
 #include <linux/percpu.h>
 #include <linux/slab.h>
-#include <linux/msm_rtb.h>
 
 #include <linux/irqchip.h>
 #include <linux/irqchip/arm-gic-common.h>
@@ -147,12 +146,12 @@ static u32 gicd_reg_bits_per_irq[NUM_SAVED_GICD_REGS] = {
 	    i++)
 
 #define read_spi_word_offset(base, reg, i) \
-	readl_relaxed_no_log(	\
+	readl_relaxed(	\
 			base + gicd_offset[reg] + i * 4 +	\
 			SPI_START_IRQ * gicd_reg_bits_per_irq[reg] / 8)
 
 #define restore_spi_word_offset(base, reg, i) \
-	writel_relaxed_no_log(	\
+	writel_relaxed(	\
 			saved_spi_regs_start[reg][i],\
 			base + gicd_offset[reg] + i * 4 +	\
 			SPI_START_IRQ * gicd_reg_bits_per_irq[reg] / 8)
@@ -189,7 +188,7 @@ static void gic_do_wait_for_rwp(void __iomem *base)
 {
 	u32 count = 1000000;	/* 1s! */
 
-	while (readl_relaxed_no_log(base + GICD_CTLR) & GICD_CTLR_RWP) {
+	while (readl_relaxed(base + GICD_CTLR) & GICD_CTLR_RWP) {
 		count--;
 		if (!count) {
 			pr_err_ratelimited("RWP timeout, gone fishing\n");
@@ -323,7 +322,7 @@ static void _gic_v3_dist_restore_set_reg(u32 offset)
 	int irq_nr = IRQ_NR_BOUND(gic_data.irq_nr) - SPI_START_IRQ;
 
 	for (i = 0; i < DIV_ROUND_UP(irq_nr, 32); i++, j += 32) {
-		u32 reg_val = readl_relaxed_no_log(base + offset + i * 4 + 4);
+		u32 reg_val = readl_relaxed(base + offset + i * 4 + 4);
 		bool irqs_restore_updated = 0;
 
 		for (l = 0; l < 32; l++) {
@@ -334,7 +333,7 @@ static void _gic_v3_dist_restore_set_reg(u32 offset)
 		}
 
 		if (irqs_restore_updated) {
-			writel_relaxed_no_log(
+			writel_relaxed(
 				reg_val, base + offset + i * 4 + 4);
 		}
 	}
@@ -385,7 +384,7 @@ static void _gic_v3_dist_clear_reg(u32 offset)
 		}
 
 		if (irqs_restore_updated) {
-			writel_relaxed_no_log(
+			writel_relaxed(
 				clear, base + offset + i * 4 + 4);
 		}
 	}
@@ -543,7 +542,7 @@ static int gic_peek_irq(struct irq_data *d, u32 offset)
 	else
 		base = gic_data.dist_base;
 
-	return !!(readl_relaxed_no_log(base + offset + (gic_irq(d) / 32) * 4) & mask);
+	return !!(readl_relaxed(base + offset + (gic_irq(d) / 32) * 4) & mask);
 }
 
 static void gic_poke_irq(struct irq_data *d, u32 offset)
@@ -787,7 +786,6 @@ static asmlinkage void __exception_irq_entry gic_handle_irq(struct pt_regs *regs
 		if (likely(irqnr > 15 && irqnr < 1020) || irqnr >= 8192) {
 			int err;
 
-			uncached_logk(LOGK_IRQ, (void *)(uintptr_t)irqnr);
 			if (static_key_true(&supports_deactivate))
 				gic_write_eoir(irqnr);
 
@@ -804,7 +802,6 @@ static asmlinkage void __exception_irq_entry gic_handle_irq(struct pt_regs *regs
 			continue;
 		}
 		if (irqnr < 16) {
-			uncached_logk(LOGK_IRQ, (void *)(uintptr_t)irqnr);
 			gic_write_eoir(irqnr);
 			if (static_key_true(&supports_deactivate))
 				gic_write_dir(irqnr);
@@ -1068,7 +1065,7 @@ static void gic_raise_softirq(const struct cpumask *mask, unsigned int irq)
 static void gic_smp_init(void)
 {
 	set_smp_cross_call(gic_raise_softirq);
-	cpuhp_setup_state_nocalls(CPUHP_AP_IRQ_GICV3_STARTING,
+	cpuhp_setup_state_nocalls(CPUHP_AP_IRQ_GIC_STARTING,
 				  "AP_IRQ_GICV3_STARTING", gic_starting_cpu,
 				  NULL);
 }

@@ -372,10 +372,6 @@ struct mhi_uci_ctxt_t {
 	if (_msg_lvl >= mhi_uci_msg_lvl) { \
 		pr_err("[%s] "_msg, __func__, ##__VA_ARGS__); \
 	} \
-	if (mhi_uci_ipc_log && (_msg_lvl >= mhi_uci_ipc_log_lvl)) { \
-		ipc_log_string(mhi_uci_ipc_log,                     \
-			"[%s] " _msg, __func__, ##__VA_ARGS__);     \
-	} \
 } while (0)
 
 
@@ -995,6 +991,15 @@ static int mhi_state_uevent(struct device *dev, struct kobj_uevent_env *env)
 	nbytes = 0;
 	mhi_parse_state(buf, &nbytes, info);
 	add_uevent_var(env, "MHI_CHANNEL_STATE_12=%s", buf);
+
+	rc = mhi_ctrl_state_info(MHI_CLIENT_DCI_OUT, &info);
+	if (rc) {
+		pr_err("Failed to obtain channel 20 state\n");
+		return -EINVAL;
+	}
+	nbytes = 0;
+	mhi_parse_state(buf, &nbytes, info);
+	add_uevent_var(env, "MHI_CHANNEL_STATE_20=%s", buf);
 
 	return 0;
 }

@@ -53,6 +53,21 @@ u64 walt_load_reported_window;
 static struct irq_work walt_cpufreq_irq_work;
 static struct irq_work walt_migration_irq_work;
 
+void
+walt_fixup_cumulative_runnable_avg(struct rq *rq,
+				   struct task_struct *p, u64 new_task_load)
+{
+	s64 task_load_delta = (s64)new_task_load - task_load(p);
+	struct walt_sched_stats *stats = &rq->walt_stats;
+
+	stats->cumulative_runnable_avg += task_load_delta;
+	if ((s64)stats->cumulative_runnable_avg < 0)
+		panic("cra less than zero: tld: %lld, task_load(p) = %u\n",
+			task_load_delta, task_load(p));
+
+	walt_fixup_cum_window_demand(rq, task_load_delta);
+}
+
 u64 sched_ktime_clock(void)
 {
 	if (unlikely(sched_ktime_suspended))
@@ -109,22 +124,18 @@ static void release_rq_locks_irqrestore(const cpumask_t *cpus,
 	local_irq_restore(*flags);
 }
 
-#ifdef CONFIG_HZ_300
 /*
- * Tick interval becomes to 3333333 due to
- * rounding error when HZ=300.
+ * Window size (in ns). Adjust for the tick size so that the window
+ * rollover occurs just before the tick boundary.
  */
-#define MIN_SCHED_RAVG_WINDOW (3333333 * 6)
-#else
-/* Min window size (in ns) = 20ms */
-#define MIN_SCHED_RAVG_WINDOW 20000000
-#endif
+/* Min window size (in ns) = 10ms */
+#define MIN_SCHED_RAVG_WINDOW ((10000000 / TICK_NSEC) * TICK_NSEC)
 
 /* Max window size (in ns) = 1s */
-#define MAX_SCHED_RAVG_WINDOW 1000000000
+#define MAX_SCHED_RAVG_WINDOW ((1000000000 / TICK_NSEC) * TICK_NSEC)
 
-/* 1 -> use PELT based load stats, 0 -> use window-based load stats */
-unsigned int __read_mostly walt_disabled = 0;
+/* true -> use PELT based load stats, false -> use window-based load stats */
+bool __read_mostly walt_disabled = false;
 
 __read_mostly unsigned int sysctl_sched_cpu_high_irqload = (10 * NSEC_PER_MSEC);
 
@@ -149,8 +160,9 @@ __read_mostly unsigned int sched_window_stats_policy =
 __read_mostly unsigned int sysctl_sched_window_stats_policy =
 	WINDOW_STATS_MAX_RECENT_AVG;
 
-/* Window size (in ns) */
-__read_mostly unsigned int sched_ravg_window = MIN_SCHED_RAVG_WINDOW;
+/* Window size (in ns) = 20ms */
+__read_mostly unsigned int sched_ravg_window =
+					    (20000000 / TICK_NSEC) * TICK_NSEC;
 
 /*
  * A after-boot constant divisor for cpu_util_freq_walt() to apply the load
@@ -207,16 +219,25 @@ __read_mostly unsigned int sysctl_sched_freq_reporting_policy;
 static int __init set_sched_ravg_window(char *str)
 {
 	unsigned int window_size;
+	unsigned int adj_window;
 
 	get_option(&str, &window_size);
 
-	if (window_size < MIN_SCHED_RAVG_WINDOW ||
-			window_size > MAX_SCHED_RAVG_WINDOW) {
+	/* Adjust for CONFIG_HZ */
+	adj_window = (window_size / TICK_NSEC) * TICK_NSEC;
+
+	/* Warn if we're a bit too far away from the expected window size */
+	WARN(adj_window < window_size - NSEC_PER_MSEC,
+	     "tick-adjusted window size %u, original was %u\n", adj_window,
+	     window_size);
+
+	if (adj_window < MIN_SCHED_RAVG_WINDOW ||
+			adj_window > MAX_SCHED_RAVG_WINDOW) {
 		WARN_ON(1);
 		return -EINVAL;
 	}
 
-	sched_ravg_window = window_size;
+	sched_ravg_window = adj_window;
 	return 0;
 }
 
@@ -364,10 +385,21 @@ static void update_task_cpu_cycles(struct task_struct *p, int cpu,
 		p->cpu_cycles = read_cycle_counter(cpu, wallclock);
 }
 
+static inline bool is_ed_enabled(void)
+{
+	return (walt_rotation_enabled || (sched_boost_policy() !=
+		SCHED_BOOST_NONE));
+}
+
 void clear_ed_task(struct task_struct *p, struct rq *rq)
 {
 	if (p == rq->ed_task)
 		rq->ed_task = NULL;
+}
+
+static inline bool is_ed_task(struct task_struct *p, u64 wallclock)
+{
+	return (wallclock - p->last_wake_ts >= EARLY_DETECTION_DURATION);
 }
 
 bool early_detection_notify(struct rq *rq, u64 wallclock)
@@ -377,15 +409,14 @@ bool early_detection_notify(struct rq *rq, u64 wallclock)
 
 	rq->ed_task = NULL;
 
-	if ((!walt_rotation_enabled && sched_boost_policy() ==
-			SCHED_BOOST_NONE) || !rq->cfs.h_nr_running)
+	if (!is_ed_enabled() || !rq->cfs.h_nr_running)
 		return 0;
 
 	list_for_each_entry(p, &rq->cfs_tasks, se.group_node) {
 		if (!loop_max)
 			break;
 
-		if (wallclock - p->last_wake_ts >= EARLY_DETECTION_DURATION) {
+		if (is_ed_task(p, wallclock)) {
 			rq->ed_task = p;
 			return 1;
 		}
@@ -896,9 +927,13 @@ void fixup_busy_time(struct task_struct *p, int new_cpu)
 		sched_irq_work_queue(&walt_migration_irq_work);
 	}
 
-	if (p == src_rq->ed_task) {
-		src_rq->ed_task = NULL;
-		dest_rq->ed_task = p;
+	if (is_ed_enabled()) {
+		if (p == src_rq->ed_task) {
+			src_rq->ed_task = NULL;
+			dest_rq->ed_task = p;
+		} else if (is_ed_task(p, wallclock)) {
+			dest_rq->ed_task = p;
+		}
 	}
 
 done:
@@ -1672,6 +1707,13 @@ account_busy_for_task_demand(struct rq *rq, struct task_struct *p, int event)
 	 */
 	if (event == TASK_WAKE || (!SCHED_ACCOUNT_WAIT_TIME &&
 			 (event == PICK_NEXT_TASK || event == TASK_MIGRATE)))
+		return 0;
+
+	/*
+	 * The idle exit time is not accounted for the first task _picked_ up to
+	 * run on the idle CPU.
+	 */
+	if (event == PICK_NEXT_TASK && rq->curr == rq->idle)
 		return 0;
 
 	/*
@@ -3246,7 +3288,6 @@ void walt_irq_work(struct irq_work *irq_work)
 	struct rq *rq;
 	int cpu;
 	u64 wc, total_grp_load = 0;
-	int flag = SCHED_CPUFREQ_WALT;
 	bool is_migration = false;
 	int level = 0;
 
@@ -3292,16 +3333,16 @@ void walt_irq_work(struct irq_work *irq_work)
 
 	for_each_sched_cluster(cluster) {
 		for_each_cpu(cpu, &cluster->cpus) {
-			int nflag = flag;
+			int nflag = 0;
 
 			rq = cpu_rq(cpu);
 
 			if (is_migration) {
 				if (rq->notif_pending) {
-					nflag |= SCHED_CPUFREQ_INTERCLUSTER_MIG;
+					nflag = SCHED_CPUFREQ_INTERCLUSTER_MIG;
 					rq->notif_pending = false;
 				} else {
-					nflag |= SCHED_CPUFREQ_FORCE_UPDATE;
+					nflag = SCHED_CPUFREQ_FORCE_UPDATE;
 				}
 			}
 

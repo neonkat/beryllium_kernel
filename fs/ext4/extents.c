@@ -2843,6 +2843,7 @@ int ext4_ext_remove_space(struct inode *inode, ext4_lblk_t start,
 	struct ext4_sb_info *sbi = EXT4_SB(inode->i_sb);
 	int depth = ext_depth(inode);
 	struct ext4_ext_path *path = NULL;
+	struct ext4_ext_path path_onstack[SZ_4K / sizeof(*path)] __aligned(8);
 	long long partial_cluster = 0;
 	handle_t *handle;
 	int i = 0, err = 0;
@@ -2951,11 +2952,15 @@ again:
 			path[k].p_block =
 				le16_to_cpu(path[k].p_hdr->eh_entries)+1;
 	} else {
-		path = kzalloc(sizeof(struct ext4_ext_path) * (depth + 1),
-			       GFP_NOFS);
-		if (path == NULL) {
-			ext4_journal_stop(handle);
-			return -ENOMEM;
+		if (depth + 1 <= ARRAY_SIZE(path_onstack)) {
+			path = path_onstack;
+			memset(path, 0, sizeof(*path) * (depth + 1));
+		} else {
+			path = kzalloc(sizeof(*path) * (depth + 1), GFP_NOFS);
+			if (path == NULL) {
+				ext4_journal_stop(handle);
+				return -ENOMEM;
+			}
 		}
 		path[0].p_maxdepth = path[0].p_depth = depth;
 		path[0].p_hdr = ext_inode_hdr(inode);
@@ -3078,7 +3083,8 @@ again:
 	}
 out:
 	ext4_ext_drop_refs(path);
-	kfree(path);
+	if (path != path_onstack)
+		kfree(path);
 	path = NULL;
 	if (err == -EAGAIN)
 		goto again;
@@ -3757,8 +3763,8 @@ static int ext4_convert_unwritten_extents_endio(handle_t *handle,
 	 * illegal.
 	 */
 	if (ee_block != map->m_lblk || ee_len > map->m_len) {
-#ifdef EXT4_DEBUG
-		ext4_warning("Inode (%ld) finished: extent logical block %llu,"
+#ifdef CONFIG_EXT4_DEBUG
+		ext4_warning(inode->i_sb, "Inode (%ld) finished: extent logical block %llu,"
 			     " len %u; IO logical block %llu, len %u",
 			     inode->i_ino, (unsigned long long)ee_block, ee_len,
 			     (unsigned long long)map->m_lblk, map->m_len);

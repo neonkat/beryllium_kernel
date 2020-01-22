@@ -253,6 +253,8 @@ struct deferred_cmd {
 	void *data;
 };
 
+static struct kmem_cache *kmem_deferred_cmd_pool;
+
 static uint32_t negotiate_features_v1(struct glink_transport_if *if_ptr,
 				      const struct glink_core_version *version,
 				      uint32_t features);
@@ -264,17 +266,7 @@ static struct glink_core_version versions[] = {
 	{1, TRACER_PKT_FEATURE, negotiate_features_v1},
 };
 
-#define SMEM_IPC_LOG(einfo, str, id, param1, param2) do { \
-	if ((glink_xprt_debug_mask & QCOM_GLINK_DEBUG_ENABLE) \
-		&& (einfo->debug_mask & QCOM_GLINK_DEBUG_ENABLE)) \
-		ipc_log_string(einfo->log_ctx, \
-				"%s: Rx:%x:%x Tx:%x:%x Cmd:%x P1:%x P2:%x\n", \
-				str, einfo->rx_ch_desc->read_index, \
-				einfo->rx_ch_desc->write_index, \
-				einfo->tx_ch_desc->read_index, \
-				einfo->tx_ch_desc->write_index, \
-				id, param1, param2); \
-} while (0) \
+#define SMEM_IPC_LOG(einfo, str, id, param1, param2) ((void)0)
 
 enum {
 	QCOM_GLINK_DEBUG_ENABLE = 1U << 0,
@@ -355,7 +347,7 @@ static void *memcpy32_toio(void *dest, const void *src, size_t num_bytes)
 	num_bytes /= sizeof(uint32_t);
 
 	while (num_bytes--)
-		__raw_writel_no_log(*src_local++, dest_local++);
+		__raw_writel(*src_local++, dest_local++);
 
 	return dest;
 }
@@ -384,7 +376,7 @@ static void *memcpy32_fromio(void *dest, const void *src, size_t num_bytes)
 	num_bytes /= sizeof(uint32_t);
 
 	while (num_bytes--)
-		*dest_local++ = __raw_readl_no_log(src_local++);
+		*dest_local++ = __raw_readl(src_local++);
 
 	return dest;
 }
@@ -841,7 +833,7 @@ static bool queue_cmd(struct edge_info *einfo, void *cmd, void *data)
 	struct command *_cmd = cmd;
 	struct deferred_cmd *d_cmd;
 
-	d_cmd = kmalloc(sizeof(*d_cmd), GFP_ATOMIC);
+	d_cmd = kmem_cache_alloc(kmem_deferred_cmd_pool, GFP_ATOMIC);
 	if (!d_cmd) {
 		GLINK_ERR("%s: Discarding cmd %d\n", __func__, _cmd->id);
 		return false;
@@ -948,6 +940,7 @@ static void __rx_worker(struct edge_info *einfo, bool atomic_ctx)
 	char trash[FIFO_ALIGNMENT];
 	struct deferred_cmd *d_cmd;
 	void *cmd_data;
+	bool ret = false;
 
 	rcu_id = srcu_read_lock(&einfo->use_ref);
 
@@ -956,11 +949,18 @@ static void __rx_worker(struct edge_info *einfo, bool atomic_ctx)
 		return;
 	}
 
+	spin_lock_irqsave(&einfo->rx_lock, flags);
 	if (!einfo->rx_fifo) {
-		if (!get_rx_fifo(einfo))
+		ret = get_rx_fifo(einfo);
+		if (!ret) {
+			spin_unlock_irqrestore(&einfo->rx_lock, flags);
+			srcu_read_unlock(&einfo->use_ref, rcu_id);
 			return;
-		einfo->xprt_if.glink_core_if_ptr->link_up(&einfo->xprt_if);
+		}
 	}
+	spin_unlock_irqrestore(&einfo->rx_lock, flags);
+	if (ret)
+		einfo->xprt_if.glink_core_if_ptr->link_up(&einfo->xprt_if);
 
 	if ((atomic_ctx) && ((einfo->tx_resume_needed)
 	    || (einfo->tx_blocked_signal_sent)
@@ -997,7 +997,7 @@ static void __rx_worker(struct edge_info *einfo, bool atomic_ctx)
 			cmd.param1 = d_cmd->param1;
 			cmd.param2 = d_cmd->param2;
 			cmd_data = d_cmd->data;
-			kfree(d_cmd);
+			kmem_cache_free(kmem_deferred_cmd_pool, d_cmd);
 			SMEM_IPC_LOG(einfo, "kthread", cmd.id, cmd.param1,
 								cmd.param2);
 		} else {
@@ -1568,14 +1568,22 @@ static void tx_cmd_ch_remote_close_ack(struct glink_transport_if *if_ptr,
 static void subsys_up(struct glink_transport_if *if_ptr)
 {
 	struct edge_info *einfo;
+	unsigned long flags;
+	bool ret = false;
 
 	einfo = container_of(if_ptr, struct edge_info, xprt_if);
 	einfo->in_ssr = false;
+	spin_lock_irqsave(&einfo->rx_lock, flags);
 	if (!einfo->rx_fifo) {
-		if (!get_rx_fifo(einfo))
+		ret = get_rx_fifo(einfo);
+		if (!ret) {
+			spin_unlock_irqrestore(&einfo->rx_lock, flags);
 			return;
-		einfo->xprt_if.glink_core_if_ptr->link_up(&einfo->xprt_if);
+		}
 	}
+	spin_unlock_irqrestore(&einfo->rx_lock, flags);
+	if (ret)
+		einfo->xprt_if.glink_core_if_ptr->link_up(&einfo->xprt_if);
 }
 
 /**
@@ -1603,7 +1611,7 @@ static int ssr(struct glink_transport_if *if_ptr)
 						struct deferred_cmd, list_node);
 		list_del(&cmd->list_node);
 		kfree(cmd->data);
-		kfree(cmd);
+		kmem_cache_free(kmem_deferred_cmd_pool, cmd);
 	}
 
 	einfo->tx_resume_needed = false;
@@ -3281,6 +3289,8 @@ static struct platform_driver glink_mailbox_driver = {
 static int __init glink_smem_native_xprt_init(void)
 {
 	int rc;
+
+	kmem_deferred_cmd_pool = KMEM_CACHE(deferred_cmd, SLAB_HWCACHE_ALIGN | SLAB_PANIC);
 
 	rc = platform_driver_register(&glink_smem_native_driver);
 	if (rc) {

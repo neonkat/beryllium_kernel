@@ -324,7 +324,7 @@ struct dwc3_msm {
 
 	u64			dummy_gsi_db;
 	dma_addr_t		dummy_gsi_db_dma;
-	u64			dummy_gevntcnt;
+	u64			*dummy_gevntcnt;
 	dma_addr_t		dummy_gevntcnt_dma;
 };
 
@@ -931,7 +931,7 @@ static void gsi_get_channel_info(struct usb_ep *ep,
 		ch_info->gevntcount_hi_addr =
 				(u32)((u64)mdwc->dummy_gevntcnt_dma >> 32);
 		dev_dbg(dwc->dev, "Dummy GEVNTCNT Addr %pK: %llx %x (LSB)\n",
-			&mdwc->dummy_gevntcnt,
+			mdwc->dummy_gevntcnt,
 			(unsigned long long)mdwc->dummy_gevntcnt_dma,
 			(u32)mdwc->dummy_gevntcnt_dma);
 	}
@@ -1867,7 +1867,7 @@ static int msm_dwc3_usbdev_notify(struct notifier_block *self,
 	}
 
 	mdwc->hc_died = true;
-	schedule_delayed_work(&mdwc->sm_work, 0);
+	queue_delayed_work(system_freezable_wq, &mdwc->sm_work, 0);
 	return 0;
 }
 
@@ -2159,14 +2159,14 @@ static void dwc3_msm_notify_event(struct dwc3 *dwc, unsigned int event,
 		 * Set-up dummy GEVNTCOUNT address to be passed on to GSI for
 		 * normal (non HW-accelerated) EPs.
 		 */
-		mdwc->dummy_gevntcnt_dma = dma_map_single(dwc->sysdev,
-						&mdwc->dummy_gevntcnt,
-						sizeof(mdwc->dummy_gevntcnt),
-						DMA_FROM_DEVICE);
-		if (dma_mapping_error(dwc->sysdev, mdwc->dummy_gevntcnt_dma)) {
-			dev_err(dwc->dev, "failed to map dummy geventcount\n");
+		mdwc->dummy_gevntcnt =
+			kzalloc(sizeof(*mdwc->dummy_gevntcnt), GFP_KERNEL);
+		if (!mdwc->dummy_gevntcnt) {
 			mdwc->dummy_gevntcnt_dma = (dma_addr_t)NULL;
+			break;
 		}
+
+		mdwc->dummy_gevntcnt_dma = virt_to_phys(mdwc->dummy_gevntcnt);
 		break;
 	case DWC3_GSI_EVT_BUF_SETUP:
 		dev_dbg(mdwc->dev, "DWC3_GSI_EVT_BUF_SETUP\n");
@@ -2241,10 +2241,8 @@ static void dwc3_msm_notify_event(struct dwc3 *dwc, unsigned int event,
 							evt->buf, evt->dma);
 		}
 		if (mdwc->dummy_gevntcnt_dma) {
-			dma_unmap_single(dwc->sysdev, mdwc->dummy_gevntcnt_dma,
-					 sizeof(mdwc->dummy_gevntcnt),
-					 DMA_FROM_DEVICE);
 			mdwc->dummy_gevntcnt_dma = (dma_addr_t)NULL;
+			kfree(mdwc->dummy_gevntcnt);
 		}
 		if (mdwc->dummy_gsi_db_dma) {
 			dma_unmap_single(dwc->sysdev, mdwc->dummy_gsi_db_dma,
@@ -2909,7 +2907,7 @@ static void dwc3_ext_event_notify(struct dwc3_msm *mdwc)
 		clear_bit(B_SUSPEND, &mdwc->inputs);
 	}
 
-	schedule_delayed_work(&mdwc->sm_work, 0);
+	queue_delayed_work(system_freezable_wq, &mdwc->sm_work, 0);
 }
 
 static void dwc3_resume_work(struct work_struct *w)
@@ -3845,19 +3843,13 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 		goto uninit_iommu;
 	}
 
-	ret = of_platform_populate(node, NULL, NULL, &pdev->dev);
-	if (ret) {
-		dev_err(&pdev->dev,
-				"failed to add create dwc3 core\n");
-		of_node_put(dwc3_node);
-		goto uninit_iommu;
-	}
+	of_platform_device_create(dwc3_node, NULL, &pdev->dev);
 
 	mdwc->dwc3 = of_find_device_by_node(dwc3_node);
 	of_node_put(dwc3_node);
 	if (!mdwc->dwc3) {
 		dev_err(&pdev->dev, "failed to get dwc3 platform device\n");
-		goto put_dwc3;
+		goto uninit_iommu;
 	}
 
 	mdwc->hs_phy = devm_usb_get_phy_by_phandle(&mdwc->dwc3->dev,
@@ -3865,14 +3857,14 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 	if (IS_ERR(mdwc->hs_phy)) {
 		dev_err(&pdev->dev, "unable to get hsphy device\n");
 		ret = PTR_ERR(mdwc->hs_phy);
-		goto put_dwc3;
+		goto uninit_iommu;
 	}
 	mdwc->ss_phy = devm_usb_get_phy_by_phandle(&mdwc->dwc3->dev,
 							"usb-phy", 1);
 	if (IS_ERR(mdwc->ss_phy)) {
 		dev_err(&pdev->dev, "unable to get ssphy device\n");
 		ret = PTR_ERR(mdwc->ss_phy);
-		goto put_dwc3;
+		goto uninit_iommu;
 	}
 
 	mdwc->bus_scale_table = msm_bus_cl_get_pdata(pdev);
@@ -3961,7 +3953,7 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 		dwc3_msm_id_notifier(&mdwc->id_nb, true, mdwc->extcon_id);
 	else if (!pval.intval) {
 		/* USB cable is not connected */
-		schedule_delayed_work(&mdwc->sm_work, 0);
+		queue_delayed_work(system_freezable_wq, &mdwc->sm_work, 0);
 	} else {
 		if (pval.intval > 0)
 			dev_info(mdwc->dev, "charger detection in progress\n");
@@ -4765,7 +4757,7 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 	}
 
 	if (work)
-		schedule_delayed_work(&mdwc->sm_work, delay);
+		queue_delayed_work(system_freezable_wq, &mdwc->sm_work, delay);
 
 ret:
 	return;
