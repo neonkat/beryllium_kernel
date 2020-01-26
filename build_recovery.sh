@@ -3,8 +3,8 @@ export KERNELDIR=`readlink -f .`
 export RAMFS_SOURCE=`readlink -f $KERNELDIR/recovery`
 export PARTITION_SIZE=67108864
 
-export OS="16.1.0"
-export SPL="2029-10"
+export OS="10.0.0"
+export SPL="2025-12"
 
 echo "kerneldir = $KERNELDIR"
 echo "ramfs_source = $RAMFS_SOURCE"
