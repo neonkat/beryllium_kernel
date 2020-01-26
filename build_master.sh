@@ -3,6 +3,7 @@
 if [[ "${1}" != "skip" ]] ; then
 	./build_clean.sh
 	./build_kernel.sh "$@" || exit 1
+	./build_recovery.sh skip || exit 1
 fi
 
 VERSION="$(cat version)-$(date +%F | sed s@-@@g)"
@@ -34,4 +35,9 @@ ramdisk_compression=auto
 	rm arter97-kernel-$VERSION-tmp.zip
 	cd ..
 	ls -al arter97-kernel-$VERSION.zip
+fi
+
+if [ -e recovery.img ] ; then
+	rm arter97-recovery-$VERSION.zip 2>/dev/null
+	cp recovery.img arter97-recovery-$VERSION.img
 fi
