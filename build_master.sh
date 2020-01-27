@@ -25,6 +25,7 @@ device.name1=beryllium
 block=/dev/block/bootdevice/by-name/boot
 is_slot_device=0
 ramdisk_compression=auto
+supported.versions=10,10.0
 " > kernelzip/props
 	cp -rp ~/android/anykernel/* kernelzip/
 	find arch/arm64/boot/dts -name '*.dtb' -exec cat {} + > kernelzip/dtb
