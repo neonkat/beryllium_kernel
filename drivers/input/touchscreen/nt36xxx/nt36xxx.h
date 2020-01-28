@@ -107,6 +107,7 @@ struct nvt_config_info {
 struct nvt_ts_data {
 	struct i2c_client *client;
 	struct input_dev *input_dev;
+	struct work_struct nvt_work;
 	struct delayed_work nvt_fwu_work;
 	struct regulator *vddio_reg;
 	struct regulator *lab_reg;
