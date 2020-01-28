@@ -1996,8 +1996,6 @@ static int32_t nvt_ts_suspend(struct device *dev)
 #endif
 	input_sync(ts->input_dev);
 
-	msleep(50);
-
 	mutex_unlock(&ts->lock);
 
 	NVT_LOG("end\n");
