@@ -83,9 +83,7 @@ static inline int fts_i2c_read(struct i2c_client *client, char *writebuf, int wr
 			};
 			for (i = 0; i < I2C_RETRY_NUMBER; i++) {
 				ret = i2c_transfer(client->adapter, msgs, 2);
-				if (ret < 0) {
-					FTS_ERROR("[IIC]: i2c_transfer(write) error, ret=%d!!", ret);
-				} else
+				if (likely(ret == 2))
 					break;
 			}
 		} else {
@@ -99,9 +97,7 @@ static inline int fts_i2c_read(struct i2c_client *client, char *writebuf, int wr
 			};
 			for (i = 0; i < I2C_RETRY_NUMBER; i++) {
 				ret = i2c_transfer(client->adapter, msgs, 1);
-				if (ret < 0) {
-					FTS_ERROR("[IIC]: i2c_transfer(read) error, ret=%d!!", ret);
-				} else
+				if (likely(ret == 1))
 					break;
 			}
 		}
@@ -133,9 +129,7 @@ static inline int fts_i2c_write(struct i2c_client *client, char *writebuf, int w
 		};
 		for (i = 0; i < I2C_RETRY_NUMBER; i++) {
 			ret = i2c_transfer(client->adapter, msgs, 1);
-			if (ret < 0) {
-				FTS_ERROR("%s: i2c_transfer(write) error, ret=%d", __func__, ret);
-			} else
+			if (likely(ret == 1))
 				break;
 		}
 	}
