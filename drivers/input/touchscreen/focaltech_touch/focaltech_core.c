@@ -653,7 +653,7 @@ static void fts_release_all_finger(void)
  * Output:
  * Return: return 0 if success
  ***********************************************************************/
-static int fts_input_report_key(struct fts_ts_data *data, int index)
+static __always_inline int fts_input_report_key(struct fts_ts_data *data, int index)
 {
 	u32 ik;
 	int id = data->events[index].id;
@@ -685,7 +685,7 @@ static int fts_input_report_key(struct fts_ts_data *data, int index)
 }
 
 #if FTS_MT_PROTOCOL_B_EN
-static int fts_input_report_b(struct fts_ts_data *data)
+static __always_inline int fts_input_report_b(struct fts_ts_data *data)
 {
 	int i = 0;
 	int uppoint = 0;
@@ -834,7 +834,7 @@ static int fts_input_report_a(struct fts_ts_data *data)
 *  Output:
 *  Return: return 0 if succuss
 *****************************************************************************/
-static int fts_read_touchdata(struct fts_ts_data *data)
+static __always_inline int fts_read_touchdata(struct fts_ts_data *data)
 {
 	int ret = 0;
 	int i = 0;
@@ -925,22 +925,6 @@ static int fts_read_touchdata(struct fts_ts_data *data)
 }
 
 /*****************************************************************************
-*  Name: fts_report_event
-*  Brief:
-*  Input:
-*  Output:
-*  Return:
-*****************************************************************************/
-static void fts_report_event(struct fts_ts_data *data)
-{
-#if FTS_MT_PROTOCOL_B_EN
-	fts_input_report_b(data);
-#else
-	fts_input_report_a(data);
-#endif
-}
-
-/*****************************************************************************
 *  Name: fts_ts_interrupt
 *  Brief:
 *  Input:
@@ -971,7 +955,11 @@ static irqreturn_t fts_ts_interrupt(int irq, void *data)
 	ret = fts_read_touchdata(ts_data);
 	if (likely(ret == 0)) {
 		mutex_lock(&ts_data->report_mutex);
-		fts_report_event(ts_data);
+#if FTS_MT_PROTOCOL_B_EN
+		fts_input_report_b(data);
+#else
+		fts_input_report_a(data);
+#endif
 		mutex_unlock(&ts_data->report_mutex);
 	}
 #if FTS_ESDCHECK_EN
