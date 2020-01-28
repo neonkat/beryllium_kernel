@@ -1062,7 +1062,7 @@ static void nvt_ts_work_func(struct work_struct *work)
 
 	mutex_lock(&ts->lock);
 
-	if (ts->dev_pm_suspend) {
+	if (unlikely(ts->dev_pm_suspend)) {
 		ret = wait_for_completion_timeout(&ts->dev_pm_suspend_completion, msecs_to_jiffies(500));
 		if (!ret) {
 			NVT_ERR("system(i2c) can't finished resuming procedure, skip it\n");
@@ -1071,7 +1071,7 @@ static void nvt_ts_work_func(struct work_struct *work)
 	}
 
 	ret = CTP_I2C_READ(ts->client, I2C_FW_Address, point_data, POINT_DATA_LEN + 1);
-	if (ret < 0) {
+	if (unlikely(ret < 0)) {
 		NVT_ERR("CTP_I2C_READ failed.(%d)\n", ret);
 		goto XFER_ERROR;
 	}
@@ -1084,7 +1084,7 @@ static void nvt_ts_work_func(struct work_struct *work)
 #endif /* #if NVT_TOUCH_ESD_PROTECT */
 
 #if WAKEUP_GESTURE
-	if (bTouchIsAwake == 0) {
+	if (unlikely(bTouchIsAwake == 0)) {
 		input_id = (uint8_t)(point_data[1] >> 3);
 		nvt_ts_wakeup_gesture_report(input_id, point_data);
 		enable_irq(ts->client->irq);
