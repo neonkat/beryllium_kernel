@@ -2205,11 +2205,6 @@ static int fwu_read_f34_queries(void)
 	else
 		retval = fwu_read_f34_v5v6_queries();
 
-	tp_maker = kzalloc(20, GFP_KERNEL);
-	if (tp_maker == NULL)
-		dev_err(rmi4_data->pdev->dev.parent,
-			"%s fail to alloc vendor name memory\n", __func__);
-
 	return retval;
 }
 
