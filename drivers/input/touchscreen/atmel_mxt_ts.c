@@ -2621,6 +2621,7 @@ start:
 		}
 	}
 
+	update_hardware_info(TYPE_TP_MAKER, data->panel_id - 0x31);
 	config_name = mxt_get_config(data, use_default_cfg);
 
 	if (data->config_info[0] >= 0x65) {
