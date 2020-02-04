@@ -1304,6 +1304,7 @@ static int ft8716_load_firmware(struct ft5x46_data *ft5x46,
 			return error;
 		}
 
+		update_hardware_info(TYPE_TP_MAKER, ft5x46->lockdown_info[0] - 0x30);
 		ft5x46->lockdown_info_acquired = true;
 		wake_up(&ft5x46->lockdown_info_acquired_wq);
 	}
