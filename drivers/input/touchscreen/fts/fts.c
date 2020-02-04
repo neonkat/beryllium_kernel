@@ -3526,7 +3526,6 @@ static int fts_probe(struct i2c_client *client, const struct i2c_device_id *idp)
 #ifdef PHONE_KEY
 	int i = 0;
 #endif
-	u8 *tp_maker;
 	openChannel(client);
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
@@ -3717,10 +3716,6 @@ static int fts_probe(struct i2c_client *client, const struct i2c_device_id *idp)
 				info->lockdown_info[0], info->lockdown_info[1], info->lockdown_info[2], info->lockdown_info[3],
 				info->lockdown_info[4], info->lockdown_info[5], info->lockdown_info[6], info->lockdown_info[7]);
 	}
-
-	tp_maker = kzalloc(20, GFP_KERNEL);
-	if (tp_maker == NULL)
-		log_error("%s fail to alloc vendor name memory\n", tag);
 
 	dev_set_drvdata(&client->dev, info);
 	device_init_wakeup(&client->dev, 1);
