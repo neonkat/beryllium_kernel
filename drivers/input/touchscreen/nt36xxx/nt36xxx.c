@@ -1544,7 +1544,6 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 #if ((TOUCH_KEY_NUM > 0) || WAKEUP_GESTURE)
 	int32_t retry = 0;
 #endif
-	char *tp_maker = NULL;
 
 	NVT_LOG("start\n");
 
@@ -1714,10 +1713,6 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 				ts->lockdown_info[4], ts->lockdown_info[5], ts->lockdown_info[6], ts->lockdown_info[7]);
 	}
 	ts->fw_name = nvt_get_config(ts);
-
-	tp_maker = kzalloc(20, GFP_KERNEL);
-	if (tp_maker == NULL)
-		NVT_ERR("fail to alloc vendor name memory\n");
 
 	device_init_wakeup(&client->dev, 1);
 	ts->dev_pm_suspend = false;
