@@ -744,7 +744,7 @@ TRACE_EVENT(sched_task_util,
 	TP_STRUCT__entry(
 		__field(int, pid			)
 		__array(char, comm, TASK_COMM_LEN	)
-		__field(unsigned long, util		)
+		__field(u64, util		)
 		__field(int, prev_cpu			)
 		__field(int, next_cpu			)
 		__field(int, backup_cpu			)
@@ -771,7 +771,7 @@ TRACE_EVENT(sched_task_util,
 		__entry->latency		= (sched_clock() - start_t);
 	),
 
-	TP_printk("pid=%d comm=%s util=%lu prev_cpu=%d next_cpu=%d backup_cpu=%d target_cpu=%d need_idle=%d fastpath=%d placement_boost=%d rtg_cpu=%d latency=%llu",
+	TP_printk("pid=%d comm=%s util=%llu prev_cpu=%d next_cpu=%d backup_cpu=%d target_cpu=%d need_idle=%d fastpath=%d placement_boost=%d rtg_cpu=%d latency=%llu",
 		__entry->pid, __entry->comm, __entry->util, __entry->prev_cpu, __entry->next_cpu, __entry->backup_cpu, __entry->target_cpu,  __entry->need_idle,  __entry->fastpath, __entry->placement_boost, __entry->rtg_cpu, __entry->latency)
 );
 
