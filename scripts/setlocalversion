@@ -58,7 +58,7 @@ scm_version()
 			fi
 			# Avoid asking git for tag as it could be extremely slow.
 			# We print -g{commitish}.
-			printf '%s%s' -g $head
+			printf '%s%s' 
 		fi
 
 		# Is this git on svn?
@@ -87,7 +87,7 @@ scm_version()
 		# Are there uncommitted changes?
 		# These are represented by + after the changeset id.
 		case "$hgid" in
-			*+|*+\ *) printf '%s' -dirty ;;
+			*+|*+\ *) printf '%s'  ;;
 		esac
 
 		# All done with mercurial
