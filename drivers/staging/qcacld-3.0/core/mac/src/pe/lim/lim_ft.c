@@ -70,7 +70,7 @@ void lim_ft_cleanup_all_ft_sessions(tpAniSirGlobal pMac)
 void lim_ft_cleanup(tpAniSirGlobal pMac, tpPESession psessionEntry)
 {
 	if (NULL == psessionEntry) {
-		pe_err("psessionEntry is NULL");
+		pe_debug("psessionEntry is NULL");
 		return;
 	}
 
@@ -312,6 +312,12 @@ void lim_ft_prepare_add_bss_req(tpAniSirGlobal pMac,
 
 	pe_debug("SIR_HAL_ADD_BSS_REQ with channel: %d",
 		pAddBssParams->currentOperChannel);
+
+	if (lim_is_session_he_capable(pftSessionEntry) &&
+	    pBeaconStruct->he_cap.present) {
+		lim_update_bss_he_capable(pMac, pAddBssParams);
+		lim_add_bss_he_cfg(pAddBssParams, pftSessionEntry);
+	}
 
 	/* Populate the STA-related parameters here */
 	/* Note that the STA here refers to the AP */

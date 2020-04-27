@@ -1113,7 +1113,7 @@ static void mhi_process_cmd_completion(struct mhi_controller *mhi_cntrl,
 		chan = MHI_TRE_GET_CMD_CHID(cmd_pkt);
 		if (chan >= mhi_cntrl->max_chan) {
 			MHI_ERR("invalid channel id %u\n", chan);
-			break;
+			goto del_ring_el;
 		}
 		mhi_chan = &mhi_cntrl->mhi_chan[chan];
 		write_lock_bh(&mhi_chan->lock);
@@ -1122,6 +1122,7 @@ static void mhi_process_cmd_completion(struct mhi_controller *mhi_cntrl,
 		write_unlock_bh(&mhi_chan->lock);
 	}
 
+del_ring_el:
 	mhi_del_ring_element(mhi_cntrl, mhi_ring);
 }
 
@@ -1284,6 +1285,10 @@ int mhi_process_data_event_ring(struct mhi_controller *mhi_cntrl,
 			local_rp->ptr, local_rp->dword[0], local_rp->dword[1]);
 
 		chan = MHI_TRE_GET_EV_CHID(local_rp);
+		if (chan >= mhi_cntrl->max_chan) {
+			MHI_ERR("invalid channel id %u\n", chan);
+			continue;
+		}
 		mhi_chan = &mhi_cntrl->mhi_chan[chan];
 
 		if (likely(type == MHI_PKT_TYPE_TX_EVENT)) {
