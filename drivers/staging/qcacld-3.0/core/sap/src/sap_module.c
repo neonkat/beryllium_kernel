@@ -1316,6 +1316,7 @@ QDF_STATUS wlansap_set_channel_change_with_csa(struct sap_context *sapContext,
 		sap_err("%u is unsafe channel", targetChannel);
 		return QDF_STATUS_E_FAULT;
 	}
+
 #ifdef WLAN_DEBUG
 	sap_nofl_debug("SAP CSA: %d ---> %d conn on 5GHz:%d, csa_reason:%s(%d) strict %d vdev %d",
 		       sapContext->channel, targetChannel,
