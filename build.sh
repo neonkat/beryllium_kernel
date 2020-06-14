@@ -13,12 +13,12 @@ OUT_DIR=$KERNEL_DIR/ak
 OUT_ZIP=$KERNEL_DIR/Releases
 
 # Kernel Version Info
-BASE="-arter97-extended"
+BASE=""
 CUR_VER=""
 KERNEL_VER="$BASE$CUR_VER"
  
 # Variables
-DEFCONFIG="derped_beryllium_defconfig"
+DEFCONFIG="simple-beryllium_defconfig"
 export ARCH=arm64
 export SUBARCH=arm64
 export LOCALVERSION="$(echo $KERNEL_VER)"
@@ -30,7 +30,7 @@ export PATH="$HOME/Toolchain/proton/bin:$PATH"
 function make_kernel {
 	        echo -e "\nBuilding....\n"
 		    make $DEFCONFIG 
-            make CC=clang CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- -j4
+            make CC="ccache clang" CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- -j4
 		    rm -rf $OUT_DIR/zImage
 		    cp -vr $IMAGE $OUT_DIR/zImage
 		    make_zip
@@ -48,8 +48,8 @@ function make_zip {
 		    echo -e "\nZipping....\n"
 		    cd $OUT_DIR
 		    rm -f *.zip
-		    zip -r9 "Beryllium_arter_extended$(echo $CUR_VER).zip" *
-			mv "Beryllium_arter_extended$(echo $CUR_VER).zip" $OUT_ZIP
+		    zip -r9 "Beryllium_Derped$(echo $CUR_VER).zip" *
+			mv "Beryllium_Derped$(echo $CUR_VER).zip" $OUT_ZIP
 		    echo -e "\nDone....\n"
 		    cd $KERNEL_DIR 
 		    }
