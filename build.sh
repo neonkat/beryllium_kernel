@@ -18,7 +18,7 @@ CUR_VER=""
 KERNEL_VER="$BASE$CUR_VER"
  
 # Variables
-DEFCONFIG="simple-beryllium_defconfig"
+DEFCONFIG="simple+-beryllium_defconfig"
 export ARCH=arm64
 export SUBARCH=arm64
 export LOCALVERSION="$(echo $KERNEL_VER)"
@@ -48,8 +48,8 @@ function make_zip {
 		    echo -e "\nZipping....\n"
 		    cd $OUT_DIR
 		    rm -f *.zip
-		    zip -r9 "Beryllium_Derped$(echo $CUR_VER).zip" *
-			mv "Beryllium_Derped$(echo $CUR_VER).zip" $OUT_ZIP
+		    zip -r9 "Beryllium_Simple+$(echo $CUR_VER).zip" *
+			mv "Beryllium_Simple+$(echo $CUR_VER).zip" $OUT_ZIP
 		    echo -e "\nDone....\n"
 		    cd $KERNEL_DIR 
 		    }
