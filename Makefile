@@ -757,11 +757,16 @@ ifeq ($(cc-name),gcc)
 KBUILD_CFLAGS	+= -mcpu=cortex-a75.cortex-a55 -mtune=cortex-a75.cortex-a55
 endif
 ifeq ($(cc-name),clang)
-KBUILD_CFLAGS	+= -mcpu=cortex-a55 -mtune=cortex-a55
+KBUILD_CFLAGS	+= -mcpu=cortex-a75+nodotprod -mtune=cortex-a75
 KBUILD_CFLAGS   += -O3 $(call cc-option, -fsanitize=local-init)
 ifdef CONFIG_LLVM_POLLY
 KBUILD_CFLAGS	+= $(call cc-option, -mllvm -polly) \
 		   $(call cc-option, -mllvm -polly-run-dce) \
+		   $(call cc-option, -mllvm -polly-scheduling=dynamic) \
+           $(call cc-option, -mllvm -polly-omp-backend=LLVM) \
+		   $(call cc-option, -mllvm -polly-opt-simplify-deps=no) \
+		   $(call cc-option, -mllvm -polly-position=before-vectorizer) \
+		   $(call cc-option, -fopenmp -fopenmp-version=50) \
 		   $(call cc-option, -mllvm -polly-run-inliner) \
 		   $(call cc-option, -mllvm -polly-opt-fusion=max) \
 		   $(call cc-option, -mllvm -polly-ast-use-contex) \
