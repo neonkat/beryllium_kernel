@@ -759,7 +759,7 @@ ifeq ($(cc-name),gcc)
 KBUILD_CFLAGS	+= -mcpu=cortex-a75.cortex-a55 -mtune=cortex-a75.cortex-a55
 endif
 ifeq ($(cc-name),clang)
-KBUILD_CFLAGS	+= -mcpu=cortex-a75+nodotprod -mtune=cortex-a75
+KBUILD_CFLAGS	+= -mcpu=cortex-a75+nodotprod -mtune=cortex-a75+nodotprod
 KBUILD_CFLAGS   += -O3 $(call cc-option, -fsanitize=local-init)
 ifdef CONFIG_LLVM_POLLY
 KBUILD_CFLAGS	+= $(call cc-option, -mllvm -polly) \
